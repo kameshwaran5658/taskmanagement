@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Task Mamagement Form</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Custom YouTube-like Styling */
+        body {
+            background-color: #f0f0f0;
+            padding: 40px;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h2 {
+            font-size: 2rem;
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .taskRow {
+            margin-bottom: 20px;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+
+        .table th {
+            background-color: #f8f9fa;
+            color: #5f6368;
+            font-weight: 600;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn {
+            font-size: 1.2rem;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .btn-primary {
+            background-color: #FF3C00;
+            border-color: #FF3C00;
+        }
+
+        .btn-warning {
+            background-color: #FF9200;
+            border-color: #FF9200;
+        }
+
+        .btn-danger {
+            background-color: #FF3C00;
+            border-color: #FF3C00;
+        }
+
+        /* Toast Notification Styling */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast {
+            min-width: 250px;
+            padding: 16px;
+            font-size: 17px;
+            border-radius: 8px;
+        }
+
+        /* Loader Styling */
+        .loader {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #FF3C00;
+            border-radius: 50%;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hover Effect for Buttons */
+        .btn:hover {
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Assign Multiple Tasks</h2>
+        <form id="taskForm">
+            <div id="taskList">
+                <div class="taskRow">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Task Name</th>
+                                <th>Task Description</th>
+                                <th>Priority</th>
+                                <th>Due Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="text" name="taskName[]" class="form-control" required></td>
+                                <td><textarea name="taskDescription[]" class="form-control" rows="3" required></textarea></td>
+                                <td>
+                                    <select name="priority[]" class="form-select" required>
+                                        <option value="Low">Low</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="High">High</option>
+                                    </select>
+                                </td>
+                                <td><input type="date" name="dueDate[]" class="form-control" required></td>
+                                <td><button type="button" class="btn btn-danger removeTask"><i class="fas fa-trash-alt"></i></button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-warning" id="addTaskButton"><i class="fas fa-plus"></i> Add Another Task</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Assign Tasks</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container">
+        <div id="toast" class="toast fade" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader"></div>
+
+    <!-- Bootstrap JS, Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            // Add new task row
+            $('#addTaskButton').click(function() {
+    var taskRow = $('#taskList .taskRow:first').clone();  // Clone the first task row
+    taskRow.find("input[type=text]").val(""); // Clear the inputs
+    taskRow.find("textarea").val(""); // Clear the textarea
+    $('#taskList').append(taskRow);  // Add the cloned row
+});
+
+
+            // Remove task row
+            $(document).on('click', '.removeTask', function(){
+                $(this).closest('.taskRow').remove();
+            });
+
+            // Handle form submission
+            $('#taskForm').on('submit', function(event) {
+                event.preventDefault();
+                
+                // Show the loader
+                $('#loader').show();
+
+                // Gather all task data
+                var taskData = $(this).serializeArray();
+                var tasks = [];
+
+                // Convert the form data into a task array
+                for (var i = 0; i < taskData.length; i += 4) {
+                    tasks.push({
+                        taskName: taskData[i].value,
+                        taskDescription: taskData[i + 1].value,
+                        priority: taskData[i + 2].value,
+                        dueDate: taskData[i + 3].value
+                    });
+                }
+
+                // Send tasks data via AJAX
+                $.ajax({
+                    url: 'backend.php',
+                    method: 'POST',
+                    data: { tasks: JSON.stringify(tasks) },
+                    success: function(response) {
+                        var data = JSON.parse(response);
+                        $('#loader').hide(); // Hide the loader
+
+                        if (data.status === 'error') {
+                            // Display validation errors in toast
+                            showToast('Validation failed: \n' + data.errors.join('\n'), 'error');
+                        } else if (data.status === 'success') {
+                            // Success message in toast
+                            showToast(data.message, 'success');
+                            $('#taskForm')[0].reset(); // Reset the form
+                        }
+                    },
+                    error: function() {
+                        $('#loader').hide(); // Hide the loader
+                        showToast('Error in submitting tasks.', 'error');
+                    }
+                });
+            });
+
+            // Function to show toast notifications
+            function showToast(message, type) {
+                var toast = $('#toast');
+                var toastBody = $('#toast .toast-body');
+                toastBody.text(message);
+                toast.removeClass('bg-success bg-danger');
+                
+                if (type === 'error') {
+                    toast.addClass('bg-danger');
+                } else {
+                    toast.addClass('bg-success');
+                }
+
+                toast.addClass('show');
+                
+                setTimeout(function() {
+                    toast.removeClass('show');
+                }, 60000); // Toast will disappear after 2 minutes
+            }
+        });
+    </script>
+</body>
+</html>
